@@ -23,6 +23,11 @@ namespace WebRTC.Controllers
             return View();
         }
 
+        public IActionResult Conference()
+        {
+            return View();
+        }
+
         public IActionResult Privacy()
         {
             return View();
