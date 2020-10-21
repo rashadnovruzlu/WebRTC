@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using WebRTC.Hubs;
 
 namespace WebRTC
 {
@@ -23,7 +24,7 @@ namespace WebRTC
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllersWithViews();
+            services.AddMvc();
        
             services.AddSignalR();
         }
@@ -33,6 +34,7 @@ namespace WebRTC
         {
             if (env.IsDevelopment())
             {
+        
                 app.UseDeveloperExceptionPage();
             }
             else
@@ -52,9 +54,10 @@ namespace WebRTC
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                    pattern: "{controller=Home}/{action=Conference}/{id?}");
 
                 endpoints.MapHub<WebRTCHub>("/webRTCHub");
+                endpoints.MapHub<WebRTCHubx>("/webRTCHubx");
             });
         }
     }

@@ -1,7 +1,7 @@
 ﻿var name;
 var connectedUser;
 
-var connection = new signalR.HubConnectionBuilder().withUrl("/webRTCHub").build();
+var connection = new signalR.HubConnectionBuilder().withUrl("/webRTCHubx").build();
 
 connection.on("ReceiveMessage", function (response) {
 

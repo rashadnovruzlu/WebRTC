@@ -1,1 +1,39 @@
 ﻿ 
+<style>
+    .basic-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    }
+</style>
+
+<div id="User-Info" class="form-group">
+    <input id="txtUserName" class="form-control" type="text" placeholder="İstifadəçi adı" width="240" />
+    <button id="btnLogin" onlick="login()" class="btn btn-lg btn-primary" style="width:150px;height:46px">Giriş</button>
+</div>
+
+<div id="Room-Info" class="form-group">
+    <input id="txtCreateRoomName" class="form-control" type="text" placeholder="Otaqın adı" width="240" />
+    <button id="btnCreateRoom" class="btn btn-lg btn-primary" style="width:150px;height:46px">Otaq yarat</button>
+</div>
+<hr />
+<div id="Room-Join">
+    <input  id="txtJoinRoomName" class="form-control" type="text" placeholder="Qoşulmaq istənilən otaqın adı" width="240" />
+    <button id="btnJoinRoom" class="btn btn-lg btn-primary" style="width:150px;height:46px">Qoşul</button>
+</div>
+<hr />
+ 
+
+ 
+<section  class="basic-grid">
+    <div class="card"><video id="localVideo" width="358" height="300" muted autoplay></video></div>
+     
+</section>
+
+@section Scripts {
+    <script src="~/js/signalr/dist/browser/signalr.js"></script>
+
+    <script src="~/js/WebRTCClient.js"></script>
+
+}
+

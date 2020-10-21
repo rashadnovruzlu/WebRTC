@@ -1,76 +1,137 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace WebRTC
+namespace WebRTC.Hubs
 {
+    public enum SendType
+    {
+        Offer = 1,
+        Answer,
+        Candidate,
+        Leave
+    }
+
     public class TransferObject
     {
-        public string Name { get; set; }
-        public string Type { get; set; }
+        public string Sender { get; set; }
+
+        public string Receiver { get; set; }
+
+        public int SendType { get; set; }
+
         public object Data { get; set; }
     }
 
-
-    public class WebRTCHub : Hub
+    public class UserInfo
     {
+        public string UserName { get; set; }
 
-       static ConcurrentDictionary<string, string> _users = new ConcurrentDictionary<string, string>();
+        public string RoomName { get; set; }
+    }
 
 
-        public async Task Join(string userName)
+    public class WebRTCHub : Hub<IRWebRTCHub>
+    {
+        private static ConcurrentDictionary<string, IList<string>> _rooms = new ConcurrentDictionary<string, IList<string>>();
+
+        private static ConcurrentDictionary<string, UserInfo> _users = new ConcurrentDictionary<string, UserInfo>();
+
+        public override Task OnDisconnectedAsync(Exception exception)
         {
-            if (_users.FirstOrDefault(x => x.Key == userName).Key == null)
-            {
-                _users.TryAdd(userName, Context.ConnectionId);
+            RemoveUserFromRoomAsync().Wait();
 
-                await SendAsync(userName, new TransferObject { Type = "login", Data = true });
-
-            }
-            else
-            {
-                await SendAsync(userName, new TransferObject { Type = "login", Data = false });
-            }
+            return base.OnDisconnectedAsync(exception);
         }
 
-
-
-        public async Task SendMessage(TransferObject transferObject)
+        public void Join(string userName)
         {
-            switch (transferObject.Type)
-            {
-                case "offer":
-                   
-                    var userName = _users.FirstOrDefault(x => x.Value == Context.ConnectionId).Key;
-                    
-                    await SendAsync(transferObject.Name, new TransferObject { Type = "offer", Data = transferObject.Data, Name = userName });
-                    
-                    break;
-              
-                case "answer":
-                    await SendAsync(transferObject.Name, new TransferObject { Type = "answer", Data = transferObject.Data });
-                   
-                    break;
+            var user = new UserInfo { UserName = userName };
 
-                case "candidate":
+            _users.AddOrUpdate(Context.ConnectionId, user, (key, oldValue) => user);
+        }
 
-                    await SendAsync(transferObject.Name, new TransferObject { Type = "candidate", Data = transferObject.Data });
-                  
-                    break;
+        public void CreateRoom(string roomName)
+        {
+            var result = _rooms.TryAdd(roomName, new List<string>());
 
-                default:
-                    break;
-            }
-
+            if (!result) throw new Exception("Room name already exists.");
 
         }
 
-        public async Task SendAsync(string userName, TransferObject transferObject)
+        private IReadOnlyList<string> FindConnetionIds(IList<string> users)
         {
-            string connectionId = _users[userName];
+            var userList = _users.Where(x => users.Contains(x.Value.UserName)).Select(x => x.Key).ToList();
 
-            await Clients.Client(connectionId).SendAsync("ReceiveMessage", transferObject);
+            return userList;
         }
+
+        public async Task JoinRoom(string roomName)
+        {
+            IList<string> users;
+
+            if (!_rooms.TryGetValue(roomName, out users)) throw new Exception("Room not found.");
+
+            var currentUser = _users[Context.ConnectionId];
+
+            currentUser.RoomName = roomName;
+
+            users.Add(currentUser.UserName);
+
+            IReadOnlyList<string> subscribers = FindConnetionIds(users);
+
+            await Clients.Clients(subscribers).AddedObservableListAsync(currentUser.UserName);
+
+            await Clients.Caller.ConnectedUserListAsync(users.Where(x => x != currentUser.UserName).ToList());
+        }
+
+        public async Task LeaveRoomAsync()
+        {
+            await RemoveUserFromRoomAsync();
+        }
+
+        public async Task SendMessage(TransferObject transfferObject)
+        {
+            var user = _users.FirstOrDefault(x => x.Value.UserName == transfferObject.Receiver);
+
+            if (user.Value != null)
+            {
+                string connectionId = user.Key;
+
+                await Clients.Client(connectionId).ReceiveMessageAsync(transfferObject);
+            }
+        }
+
+        private async Task RemoveUserFromRoomAsync()
+        {
+            var user = _users[Context.ConnectionId];
+
+            if (user.RoomName != null)
+            {
+                var userList = _rooms[user.RoomName];
+
+                userList.Remove(user.UserName);
+
+                IReadOnlyList<string> subscribers = FindConnetionIds(userList);
+
+                await Clients.Clients(subscribers).DeletedObservableListAsync(user.UserName);
+            }
+        }
+    }
+
+    public interface IRWebRTCHub
+    {
+        Task AddedObservableListAsync(string userName);
+
+        Task DeletedObservableListAsync(string userName);
+
+        Task ReceiveMessageAsync(TransferObject transferObject);
+
+        Task ConnectedUserListAsync(IList<string> userList);
+
+
     }
 }
