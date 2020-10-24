@@ -1,4 +1,4 @@
-﻿ 
+﻿
 <style>
     .basic-grid {
         display: grid;
@@ -18,16 +18,30 @@
 </div>
 <hr />
 <div id="Room-Join">
-    <input  id="txtJoinRoomName" class="form-control" type="text" placeholder="Qoşulmaq istənilən otaqın adı" width="240" />
+    <input id="txtJoinRoomName" class="form-control" type="text" placeholder="Qoşulmaq istənilən otaqın adı" width="240" />
     <button id="btnJoinRoom" class="btn btn-lg btn-primary" style="width:150px;height:46px">Qoşul</button>
 </div>
 <hr />
- 
 
- 
-<section  class="basic-grid">
-    <div class="card"><video id="localVideo" width="358" height="300" muted autoplay></video></div>
-     
+
+
+<section class="basic-grid">
+    <div class="card">
+        <video id="localVideo" width="358" height="300" autoplay></video> 
+        <div>
+            
+            <label style="margin-left: 25px;margin-right: 40px;" class="checkbox-inline">
+                <input type="checkbox" id="toggleVideo" checked data-toggle="toggle">
+            </label>
+            <label class="checkbox-inline">
+                <input type="checkbox" id="toggleVoice" checked data-toggle="toggle">
+            </label>
+        </div>
+        <b><span id="connectedUser"></span></b>
+        <input type="button" id="btnShareScreen" onclick="shareScreen()" value="Share Screen" />
+        <input type="button" id="btnStopShareScreen" onclick="stopShareScreen()" value="Stop Screen" />
+    </div>
+
 </section>
 
 @section Scripts {

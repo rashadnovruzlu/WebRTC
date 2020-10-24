@@ -4,12 +4,13 @@ var _connectedUserList;
 
 const SendType = { "Offer": 1, "Answer": 2, "Candidate": 3 };
 
-var _rtcConnections = new Array();
+var _rtcConnections = [];
 
 var _connectedUser = null;
 
 const _callConfiguration = { video: true, audio: true };
 
+var _localStream;
 
 const _serverConfiguration = {
     "iceServers": [{
@@ -29,10 +30,11 @@ _connection.on("AddedObservableListAsync", function (userName) {
 
     console.log("Added new item:", userName);
 
+    _connectedUserList.push(userName);
+
     if (userName !== _connectedUser) {
 
         createConnection(userName, 0);
-
     }
 
 });
@@ -41,9 +43,22 @@ _connection.on("DeletedObservableListAsync", function (userName) {
 
     console.log("Deleted new item:", userName);
 
+    for (var i = 0; i < _connectedUserList.length; i++) {
+
+        if (_connectedUserList[i] === userName) {
+
+            _connectedUserList.splice(i, 1);
+
+            i--;
+        }
+    }
+
     delete _rtcConnections[userName];
 
     document.querySelector('#remote-video-' + userName).remove();
+
+    document.querySelector('#div-' + userName).remove();
+
 });
 
 _connection.on("ConnectedUserListAsync", function (userList) {
@@ -59,6 +74,21 @@ _connection.on("ConnectedUserListAsync", function (userList) {
     }
 
 });
+
+_connection.on("AudioTrackAsync", function (userName, isEnable) {
+
+    console.log("AudioTrackAsync:", isEnable);
+
+
+});
+
+_connection.on("VideoTrackAsync", function (userName, isEnable) {
+
+    console.log("VideoTrackAsync:", isEnable);
+
+
+});
+
 
 _connection.on("ReceiveMessageAsync", function (response) {
 
@@ -103,26 +133,27 @@ function createConnection(userName, isCall) {
 
     console.log("createConnection:", userName);
 
-    var videoElement = `<div class="card"><video width="358" height="300" id="remote-video-` + userName + `"  muted autoplay></video></div>`;
+    var videoElement = `<div id="div-` + userName + `" class="card"><video width="358" height="300" id="remote-video-` + userName + `"  muted autoplay></video> </br> <b> ` + userName + `</b> </div>`;
 
     $(".basic-grid").append(videoElement);
 
-    navigator.webkitGetUserMedia(_callConfiguration, function (myStream) {
+    navigator.webkitGetUserMedia(_callConfiguration, function (localStream) {
 
         let remoteVideo = document.querySelector('#remote-video-' + userName);
 
         _rtcConnections[userName] = new webkitRTCPeerConnection(_serverConfiguration);
 
-        _rtcConnections[userName].addStream(myStream);
+        //_rtcConnections[userName].addStream(myStream);
+
+        localStream.getTracks().forEach(function (track) {
+            _rtcConnections[userName].addTrack(track, localStream);
+        });
 
         _rtcConnections[userName].onaddstream = function (e) {
 
             try {
-                console.log('///////////////////////////////////////////////////////////////////////////////////////////////////////////');
-                console.log('onaddstream:', userName);
-                console.log('e.stream:', e.stream);
+
                 remoteVideo.srcObject = e.stream;
-                console.log('///////////////////////////////////////////////////////////////////////////////////////////////////////////');
 
             } catch (error) {
                 remoteVideo.src = window.URL.createObjectURL(e.stream);
@@ -204,10 +235,14 @@ function turnOnMedia() {
 
         var localVideo = document.querySelector('#localVideo');
 
+        _localStream = myStream;
+
+        $("#connectedUser").html(_connectedUser);
+
         try {
-            localVideo.srcObject = myStream;
+            localVideo.srcObject = _localStream;
         } catch (error) {
-            localVideo.src = window.URL.createObjectURL(myStream);
+            localVideo.src = window.URL.createObjectURL(_localStream);
         }
 
     }, function (error) {
@@ -215,7 +250,46 @@ function turnOnMedia() {
     });
 }
 
+$(function () {
+    $('#toggleVideo').change(function () {
 
+        var value = $(this).prop('checked');
+
+
+        for (var i = 0; i < _connectedUserList.length; i++) {
+
+            let stream = _rtcConnections[_connectedUserList[i]].getLocalStreams()[0];
+
+            stream.getVideoTracks()[0].enabled = value;
+        }
+
+        _localStream.getVideoTracks()[0].enabled = value;
+
+        _connection.invoke("VideoTrackAsync", _connectedUser, value).catch(function (err) {
+            return console.error(err.toString());
+        });
+
+    });
+    $('#toggleVoice').change(function () {
+
+        var value = $(this).prop('checked');
+
+        for (var i = 0; i < _connectedUserList.length; i++) {
+
+            let stream = _rtcConnections[_connectedUserList[i]].getLocalStreams()[0];
+
+            stream.getAudioTracks()[0].enabled = value;
+        }
+
+        _localStream.getAudioTracks()[0].enabled = value;
+
+        _connection.invoke("AudioTrackAsync", _connectedUser, value).catch(function (err) {
+            return console.error(err.toString());
+        });
+
+
+    });
+});
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -248,6 +322,7 @@ $("#btnJoinRoom").click(function () {
     });
 
     turnOnMedia();
+
     hide();
 
 });
@@ -256,4 +331,51 @@ function hide() {
     $("#User-Info").hide();
     $("#Room-Info").hide();
     $("#Room-Join").hide();
+}
+
+
+var displayMediaStream;
+
+async function shareScreen() {
+
+
+    displayMediaStream = await navigator.mediaDevices.getDisplayMedia();
+     
+    let videoTrack = displayMediaStream.getVideoTracks()[0];
+
+    for (var i = 0; i < _connectedUserList.length; i++) {
+
+        let sender = _rtcConnections[_connectedUserList[i]].getSenders().find(function (s) {
+            return s.track.kind === videoTrack.kind;
+        });
+
+        sender.replaceTrack(videoTrack);
+    }
+
+    var localVideo = document.querySelector('#localVideo');
+
+    localVideo.srcObject = displayMediaStream;
+
+
+    videoTrack.onended = function () {
+        stopShareScreen();
+    };
+}
+
+
+
+function stopShareScreen() {
+
+    let videoTrack = _localStream.getVideoTracks()[0];
+
+    for (var i = 0; i < _connectedUserList.length; i++) {
+
+        let sender = _rtcConnections[_connectedUserList[i]].getSenders().find(function (s) {
+            return s.track.kind === videoTrack.kind;
+        });
+
+        sender.replaceTrack(videoTrack);
+    }
+
+    localVideo.srcObject = _localStream;
 }

@@ -47,6 +47,33 @@ namespace WebRTC.Hubs
             return base.OnDisconnectedAsync(exception);
         }
 
+        public async Task AudioTrackAsync(string userName, bool isEnable)
+        {
+            IReadOnlyList<string> subscribers = FindSubscribers();
+
+            await Clients.Clients(subscribers).AudioTrackAsync(userName, isEnable);
+        }
+
+        public async Task VideoTrackAsync(string userName, bool isEnable)
+        {
+            IReadOnlyList<string> subscribers = FindSubscribers();
+
+            await Clients.Clients(subscribers).VideoTrackAsync(userName, isEnable);
+        }
+
+        private IReadOnlyList<string> FindSubscribers()
+        {
+            var currentUser = _users[Context.ConnectionId];
+
+            IList<string> users;
+
+            if (!_rooms.TryGetValue(currentUser.RoomName, out users)) throw new Exception("Room not found.");
+
+            IReadOnlyList<string> subscribers = FindConnetionIds(users).Where(x => x != Context.ConnectionId).ToList();
+
+            return subscribers;
+        }
+
         public void Join(string userName)
         {
             var user = new UserInfo { UserName = userName };
@@ -118,6 +145,11 @@ namespace WebRTC.Hubs
                 IReadOnlyList<string> subscribers = FindConnetionIds(userList);
 
                 await Clients.Clients(subscribers).DeletedObservableListAsync(user.UserName);
+
+                if (userList.Count == 0)
+                {
+                    _rooms.TryRemove(user.RoomName, out userList);
+                }
             }
         }
     }
@@ -131,6 +163,10 @@ namespace WebRTC.Hubs
         Task ReceiveMessageAsync(TransferObject transferObject);
 
         Task ConnectedUserListAsync(IList<string> userList);
+
+        Task AudioTrackAsync(string userName, bool isEnable);
+
+        Task VideoTrackAsync(string userName, bool isEnable);
 
 
     }
