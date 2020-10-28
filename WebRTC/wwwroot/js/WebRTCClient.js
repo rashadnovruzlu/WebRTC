@@ -379,3 +379,20 @@ function stopShareScreen() {
 
     localVideo.srcObject = _localStream;
 }
+
+
+async function recordScreen() {
+    let stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    let recorder = new RecordRTCPromisesHandler(stream, {
+        type: 'video',
+        mimeType: 'video/mp4'
+    });
+    recorder.startRecording();
+
+    const sleep = m => new Promise(r => setTimeout(r, m));
+    await sleep(10000);
+
+    await recorder.stopRecording();
+    let blob = await recorder.getBlob();
+    invokeSaveAsDialog(blob);
+}

@@ -27,9 +27,9 @@
 
 <section class="basic-grid">
     <div class="card">
-        <video id="localVideo" width="358" height="300" autoplay></video> 
+        <video id="localVideo" width="358" height="300" muted autoplay></video>
         <div>
-            
+
             <label style="margin-left: 25px;margin-right: 40px;" class="checkbox-inline">
                 <input type="checkbox" id="toggleVideo" checked data-toggle="toggle">
             </label>
@@ -40,13 +40,15 @@
         <b><span id="connectedUser"></span></b>
         <input type="button" id="btnShareScreen" onclick="shareScreen()" value="Share Screen" />
         <input type="button" id="btnStopShareScreen" onclick="stopShareScreen()" value="Stop Screen" />
+        <input type="button" id="btnRecordStart" onclick="recordScreen()" value="Record Screen" />
+        <input type="button" id="btnStopShareScreen" onclick="stopShareScreen()" value="Stop record" />
     </div>
 
 </section>
 
 @section Scripts {
     <script src="~/js/signalr/dist/browser/signalr.js"></script>
-
+    <script src="https://www.WebRTC-Experiment.com/RecordRTC.js"></script>
     <script src="~/js/WebRTCClient.js"></script>
 
 }
