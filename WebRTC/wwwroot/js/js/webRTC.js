@@ -122,14 +122,7 @@ function turnOnCamera() {
 
         _webRTCLocalStream = myStream;
 
-        try {
-
-            localVideo.srcObject = _webRTCLocalStream;
-
-        } catch (error) {
-
-            localVideo.src = window.URL.createObjectURL(_webRTCLocalStream);
-        }
+        
 
     }, function (err) {
         console.error(`Error when creating an answer: ${err.toString()}`);
@@ -209,14 +202,33 @@ function stopShareScreen() {
 }
 
  
+ var completeBlob ;
+var mediaStream ;
+async function startRecordScreen() {
 
-function startRecordScreen() {
+   mediaStream  = await navigator.mediaDevices.getDisplayMedia({
+  video: { mediaSource: "screen" }
+});
+var track= _webRTCLocalStream.getAudioTracks()[0];
+mediaStream.addTrack(track);
+const recorder = new MediaRecorder(mediaStream);
 
-     
+const chunks = [];
+recorder.ondataavailable = e => chunks.push(e.data);
+recorder.start();
+
+recorder.onstop = e => {
+console.log('stop');
+  completeBlob = new Blob(chunks, { type: chunks[0].type });
+  const localVideo = getLocalVideoElement();
+  localVideo.src = URL.createObjectURL(completeBlob);
+};
 }
 
 function stopRecordScreen() {
-     
+ mediaStream.getTracks().forEach(function (track) {
+               track.stop();
+            }); 
 }
 
 
