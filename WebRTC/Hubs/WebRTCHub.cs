@@ -51,14 +51,14 @@ namespace WebRTC.Hubs
         {
             IReadOnlyList<string> subscribers = FindSubscribers();
 
-            await Clients.Clients(subscribers).AudioTrackAsync(userName, isEnable);
+            await Clients.Clients(subscribers).AudioTrack(userName, isEnable);
         }
 
         public async Task VideoTrackAsync(string userName, bool isEnable)
         {
             IReadOnlyList<string> subscribers = FindSubscribers();
 
-            await Clients.Clients(subscribers).VideoTrackAsync(userName, isEnable);
+            await Clients.Clients(subscribers).VideoTrack(userName, isEnable);
         }
 
         private IReadOnlyList<string> FindSubscribers()
@@ -110,9 +110,9 @@ namespace WebRTC.Hubs
 
             IReadOnlyList<string> subscribers = FindConnetionIds(users);
 
-            await Clients.Clients(subscribers).AddedObservableListAsync(currentUser.UserName);
+            await Clients.Clients(subscribers).AddedObservableCollection(currentUser.UserName);
 
-            await Clients.Caller.ConnectedUserListAsync(users.Where(x => x != currentUser.UserName).ToList());
+            await Clients.Caller.ConnectedUsers(users.Where(x => x != currentUser.UserName).ToList());
         }
 
         public async Task LeaveRoomAsync()
@@ -128,13 +128,15 @@ namespace WebRTC.Hubs
             {
                 string connectionId = user.Key;
 
-                await Clients.Client(connectionId).ReceiveMessageAsync(transfferObject);
+                await Clients.Client(connectionId).ReceiveMessage(transfferObject);
             }
         }
 
         private async Task RemoveUserFromRoomAsync()
         {
-            var user = _users[Context.ConnectionId];
+            UserInfo user;
+
+            if (!_users.TryGetValue(Context.ConnectionId, out user)) return;
 
             if (user.RoomName != null)
             {
@@ -142,13 +144,15 @@ namespace WebRTC.Hubs
 
                 userList.Remove(user.UserName);
 
-                IReadOnlyList<string> subscribers = FindConnetionIds(userList);
-
-                await Clients.Clients(subscribers).DeletedObservableListAsync(user.UserName);
-
                 if (userList.Count == 0)
                 {
                     _rooms.TryRemove(user.RoomName, out userList);
+                }
+                else
+                {
+                    IReadOnlyList<string> subscribers = FindConnetionIds(userList);
+
+                    await Clients.Clients(subscribers).DeletedObservableCollection(user.UserName);
                 }
             }
         }
@@ -156,17 +160,17 @@ namespace WebRTC.Hubs
 
     public interface IRWebRTCHub
     {
-        Task AddedObservableListAsync(string userName);
+        Task AddedObservableCollection(string userName);
 
-        Task DeletedObservableListAsync(string userName);
+        Task DeletedObservableCollection(string userName);
 
-        Task ReceiveMessageAsync(TransferObject transferObject);
+        Task ReceiveMessage(TransferObject transferObject);
 
-        Task ConnectedUserListAsync(IList<string> userList);
+        Task ConnectedUsers(IList<string> userList);
 
-        Task AudioTrackAsync(string userName, bool isEnable);
+        Task AudioTrack(string userName, bool isEnable);
 
-        Task VideoTrackAsync(string userName, bool isEnable);
+        Task VideoTrack(string userName, bool isEnable);
 
 
     }

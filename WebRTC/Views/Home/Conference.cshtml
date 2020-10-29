@@ -9,7 +9,7 @@
 
 <div id="User-Info" class="form-group">
     <input id="txtUserName" class="form-control" type="text" placeholder="İstifadəçi adı" width="240" />
-    <button id="btnLogin" onlick="login()" class="btn btn-lg btn-primary" style="width:150px;height:46px">Giriş</button>
+    <button id="btnLogin"  class="btn btn-lg btn-primary" style="width:150px;height:46px">Giriş</button>
 </div>
 
 <div id="Room-Info" class="form-group">
@@ -27,7 +27,7 @@
 
 <section class="basic-grid">
     <div class="card">
-        <video id="localVideo" width="358" height="300" muted autoplay></video>
+        <video id="localVideo" width="358" height="300"  autoplay></video>
         <div>
 
             <label style="margin-left: 25px;margin-right: 40px;" class="checkbox-inline">
@@ -38,18 +38,26 @@
             </label>
         </div>
         <b><span id="connectedUser"></span></b>
-        <input type="button" id="btnShareScreen" onclick="shareScreen()" value="Share Screen" />
-        <input type="button" id="btnStopShareScreen" onclick="stopShareScreen()" value="Stop Screen" />
-        <input type="button" id="btnRecordStart" onclick="recordScreen()" value="Record Screen" />
-        <input type="button" id="btnStopShareScreen" onclick="stopShareScreen()" value="Stop record" />
+        <input type="button" id="btnShareScreen" value="Share Screen" />
+        <input type="button" id="btnStopShareScreen" value="Stop Screen" />
+        <input type="button" id="btnRecordStart" value="Record Screen" />
+        <input type="button" id="btnStopShareScreen" value="Stop record" />
     </div>
 
 </section>
+<video controls>
+    <source id="src1" src=""   >
+   
+    
+</video>
 
 @section Scripts {
-    <script src="~/js/signalr/dist/browser/signalr.js"></script>
-    <script src="https://www.WebRTC-Experiment.com/RecordRTC.js"></script>
-    <script src="~/js/WebRTCClient.js"></script>
 
+    <script src="~/js/signalr/dist/browser/signalr.js"></script>
+    <script src="~/js/js/enums.js"></script>
+    <script src="https://www.WebRTC-Experiment.com/RecordRTC.js"></script>
+    <script src="~/js/js/ClientUI.js"></script>
+    <script src="~/js/js/webRTC.js"></script>
+    <script src="~/js/js/signalRClient.js"></script>
 }
 
