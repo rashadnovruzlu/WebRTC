@@ -60,7 +60,32 @@ _signalRConnection.on("VideoTrack", function (userName, isEnable) {
 });
 
 
-_signalRConnection.on("ReceiveMessage", function (response) {
+_signalRConnection.on("ReceiveMessage", function (userName, message) {
+
+   receiveMessage(userName, message);
+
+});
+
+_signalRConnection.on("HostJoiningConfirmation", function (userName) {
+
+    hostJoiningConfirmation(userName);
+
+});
+
+_signalRConnection.on("ReceiveHostJoiningResponse", function (responseStatusId) {
+
+    receiveHostJoiningResponse(responseStatusId);
+
+});
+
+_signalRConnection.on("ChangedHost", function () {
+
+    changedHost();
+
+});
+
+
+_signalRConnection.on("ReceiveSendHandshakeInfo", function (response) {
 
     switch (response.sendType) {
         case SendType.Offer:
@@ -86,10 +111,17 @@ _signalRConnection.start().then(function () {
 
 
 function invokeSendMessage(message) {
+ 
+    _signalRConnection.invoke("SendMessage", message).catch(function (err) {
+        return console.error(err.toString());
+    });
+}
+
+function invokeSendHandshakeInfo(message) {
 
     message.Sender = _currentUser;
 
-    _signalRConnection.invoke("SendMessage", message).catch(function (err) {
+    _signalRConnection.invoke("SendHandshakeInfo", message).catch(function (err) {
         return console.error(err.toString());
     });
 }
@@ -110,16 +142,16 @@ function invokeAudioTrack(isEnable) {
 
 }
 
-function invokeJoin() {
+function invokeJoin(roomName) {
 
-    _signalRConnection.invoke("Join", _currentUser).catch(function (err) {
+    _signalRConnection.invoke("Join", roomName, _currentUser).catch(function (err) {
         return console.error(err.toString());
     });
 }
 
 function invokeCreateRoom(roomName) {
 
-    _signalRConnection.invoke("CreateRoom", roomName).catch(function (err) {
+    _signalRConnection.invoke("CreateRoom", roomName, _currentUser).catch(function (err) {
         return console.error(err.toString());
     });
 }
@@ -127,6 +159,27 @@ function invokeCreateRoom(roomName) {
 function invokeJoinRoom(roomName) {
 
     _signalRConnection.invoke("JoinRoom", roomName).catch(function (err) {
+        return console.error(err.toString());
+    });
+}
+
+function invokeSendHostJoiningAnswer(roomName, userName) {
+
+    _signalRConnection.invoke("SendHostJoiningAnswer", roomName, userName).catch(function (err) {
+        return console.error(err.toString());
+    });
+}
+
+function invokeJoiningRequestToHost(roomName, userName) {
+
+    _signalRConnection.invoke("JoiningRequestToHost", roomName, userName).catch(function (err) {
+        return console.error(err.toString());
+    });
+}
+
+function invokeChangeRoomHost(roomName, userName) {
+
+    _signalRConnection.invoke("ChangeRoomHost", roomName, userName).catch(function (err) {
         return console.error(err.toString());
     });
 }

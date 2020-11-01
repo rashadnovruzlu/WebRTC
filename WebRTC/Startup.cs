@@ -56,8 +56,7 @@ namespace WebRTC
                     name: "default",
                     pattern: "{controller=Home}/{action=Conference}/{id?}");
 
-                endpoints.MapHub<WebRTCHub>("/webRTCHub");
-                endpoints.MapHub<WebRTCHubx>("/webRTCHubx");
+                endpoints.MapHub<WebRTCHub>("/webRTCHub"); 
             });
         }
     }

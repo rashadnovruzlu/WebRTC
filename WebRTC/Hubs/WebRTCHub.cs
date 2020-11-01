@@ -4,39 +4,14 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using WebRTC.Models;
 
 namespace WebRTC.Hubs
 {
-    public enum SendType
-    {
-        Offer = 1,
-        Answer,
-        Candidate,
-        Leave
-    }
-
-    public class TransferObject
-    {
-        public string Sender { get; set; }
-
-        public string Receiver { get; set; }
-
-        public int SendType { get; set; }
-
-        public object Data { get; set; }
-    }
-
-    public class UserInfo
-    {
-        public string UserName { get; set; }
-
-        public string RoomName { get; set; }
-    }
-
-
+    //Host cixis etse ve ya host deyisse
     public class WebRTCHub : Hub<IRWebRTCHub>
     {
-        private static ConcurrentDictionary<string, IList<string>> _rooms = new ConcurrentDictionary<string, IList<string>>();
+        private static ConcurrentDictionary<string, Room> _rooms = new ConcurrentDictionary<string, Room>();
 
         private static ConcurrentDictionary<string, UserInfo> _users = new ConcurrentDictionary<string, UserInfo>();
 
@@ -65,28 +40,37 @@ namespace WebRTC.Hubs
         {
             var currentUser = _users[Context.ConnectionId];
 
-            IList<string> users;
+            Room room;
 
-            if (!_rooms.TryGetValue(currentUser.RoomName, out users)) throw new Exception("Room not found.");
+            if (!_rooms.TryGetValue(currentUser.RoomName, out room)) throw new Exception("Room not found.");
+
+            IList<string> users = room.Users;
 
             IReadOnlyList<string> subscribers = FindConnetionIds(users).Where(x => x != Context.ConnectionId).ToList();
 
             return subscribers;
         }
 
-        public void Join(string userName)
+        public async Task Join(string roomName, string userName)
         {
+            if (string.IsNullOrWhiteSpace(roomName) || string.IsNullOrWhiteSpace(userName)) throw new Exception("Room name and user name is required!");
+
             var user = new UserInfo { UserName = userName };
 
             _users.AddOrUpdate(Context.ConnectionId, user, (key, oldValue) => user);
+
+            await JoinRoom(roomName);
         }
 
-        public void CreateRoom(string roomName)
+        public async Task CreateRoom(string roomName, string userName)
         {
-            var result = _rooms.TryAdd(roomName, new List<string>());
+            if (string.IsNullOrWhiteSpace(roomName) || string.IsNullOrWhiteSpace(userName)) throw new Exception("Room name and user name is required!");
+
+            var result = _rooms.TryAdd(roomName, new Room { RoomName = roomName, HostConnectionId = Context.ConnectionId });
 
             if (!result) throw new Exception("Room name already exists.");
 
+            await Join(roomName, userName);
         }
 
         private IReadOnlyList<string> FindConnetionIds(IList<string> users)
@@ -96,13 +80,15 @@ namespace WebRTC.Hubs
             return userList;
         }
 
-        public async Task JoinRoom(string roomName)
+        private async Task JoinRoom(string roomName)
         {
-            IList<string> users;
+            Room room;
 
-            if (!_rooms.TryGetValue(roomName, out users)) throw new Exception("Room not found.");
+            if (!_rooms.TryGetValue(roomName, out room)) throw new Exception("Room not found.");
 
             var currentUser = _users[Context.ConnectionId];
+
+            var users = room.Users;
 
             currentUser.RoomName = roomName;
 
@@ -120,7 +106,7 @@ namespace WebRTC.Hubs
             await RemoveUserFromRoomAsync();
         }
 
-        public async Task SendMessage(TransferObject transfferObject)
+        public async Task SendHandshakeInfo(TransferObject transfferObject)
         {
             var user = _users.FirstOrDefault(x => x.Value.UserName == transfferObject.Receiver);
 
@@ -128,9 +114,56 @@ namespace WebRTC.Hubs
             {
                 string connectionId = user.Key;
 
-                await Clients.Client(connectionId).ReceiveMessage(transfferObject);
+                await Clients.Client(connectionId).ReceiveSendHandshakeInfo(transfferObject);
             }
         }
+
+        public async Task SendMessage(string message)
+        {
+            Room room;
+
+            var currentUser = _users[Context.ConnectionId];
+
+            if (!_rooms.TryGetValue(currentUser.RoomName, out room)) throw new Exception("Room not found.");
+
+            var users = room.Users;
+
+            IReadOnlyList<string> subscribers = FindConnetionIds(users);
+
+            await Clients.Clients(subscribers).ReceiveMessage(currentUser.UserName, message);
+        }
+
+        public async Task JoiningRequestToHost(string roomName, string userName)
+        {
+            Room room;
+
+            if (!_rooms.TryGetValue(roomName, out room)) throw new Exception("Room not found.");
+
+            await Clients.Client(room.HostConnectionId).HostJoiningConfirmation(userName);
+        }
+
+        public async Task SendHostJoiningAnswer(string userName, int responseStatusId)
+        {
+            var user = _users.FirstOrDefault(x => x.Value.UserName == userName);
+
+            await Clients.Client(user.Key).ReceiveHostJoiningResponse(responseStatusId);
+        }
+
+        public async Task ChangeRoomHost(string roomName, string userName)
+        {
+            var user = _users.FirstOrDefault(x => x.Value.UserName == userName);
+
+            var room = _rooms[roomName];
+
+            if (room.HostConnectionId != Context.ConnectionId) throw new Exception("Access denied.");
+
+            room.HostConnectionId = user.Key;
+
+            await Clients.Client(user.Key).ChangedHost();
+        }
+
+
+
 
         private async Task RemoveUserFromRoomAsync()
         {
@@ -140,13 +173,20 @@ namespace WebRTC.Hubs
 
             if (user.RoomName != null)
             {
-                var userList = _rooms[user.RoomName];
+                var room = _rooms[user.RoomName];
+
+                var userList = room.Users;
 
                 userList.Remove(user.UserName);
 
+                if (room.HostConnectionId == Context.ConnectionId && userList.Count > 0)
+                {
+                    room.HostConnectionId = userList.First();
+                }
+
                 if (userList.Count == 0)
                 {
-                    _rooms.TryRemove(user.RoomName, out userList);
+                    _rooms.TryRemove(user.RoomName, out room);
                 }
                 else
                 {
@@ -155,7 +195,11 @@ namespace WebRTC.Hubs
                     await Clients.Clients(subscribers).DeletedObservableCollection(user.UserName);
                 }
             }
+
+            _users.Remove(Context.ConnectionId, out user);
         }
+
+
     }
 
     public interface IRWebRTCHub
@@ -164,7 +208,7 @@ namespace WebRTC.Hubs
 
         Task DeletedObservableCollection(string userName);
 
-        Task ReceiveMessage(TransferObject transferObject);
+        Task ReceiveSendHandshakeInfo(TransferObject transferObject);
 
         Task ConnectedUsers(IList<string> userList);
 
@@ -172,6 +216,12 @@ namespace WebRTC.Hubs
 
         Task VideoTrack(string userName, bool isEnable);
 
+        Task ReceiveMessage(string userName, string message);
 
+        Task ReceiveHostJoiningResponse(int responseStatusId);
+
+        Task HostJoiningConfirmation(string userName);
+
+        Task ChangedHost();
     }
 }

@@ -17,7 +17,13 @@ const _webRTCCallConfiguration = {
 
 var _webRTCConnections = [];
 
-var _webRTCLocalStream = null;
+var _webRTCLocalStream ;
+
+var _complateBlob;
+
+var _recorder;
+
+var _recordMediaStream ;
 
 
 function createWebRTCConnection(userName) {
@@ -47,7 +53,7 @@ function createWebRTCConnection(userName) {
 
             _webRTCConnections[userName].onicecandidate = function (event) {
                 if (event.candidate) {
-                    invokeSendMessage({
+                    invokeSendHandshakeInfo({
                         SendType: SendType.Candidate,
                         Receiver: userName,
                         Data: event.candidate
@@ -64,11 +70,10 @@ function createWebRTCConnection(userName) {
 
 }
 
-
 function webRTCCreateOffer(userName) {
 
     _webRTCConnections[userName].createOffer(function (offer) {
-        invokeSendMessage({
+        invokeSendHandshakeInfo({
             SendType: SendType.Offer,
             Receiver: userName,
             Data: offer
@@ -82,7 +87,6 @@ function webRTCCreateOffer(userName) {
 
 }
 
-
 function handleOffer(userName, offer) {
 
     _webRTCConnections[userName].setRemoteDescription(new RTCSessionDescription(offer));
@@ -91,7 +95,7 @@ function handleOffer(userName, offer) {
 
         _webRTCConnections[userName].setLocalDescription(answer);
 
-        invokeSendMessage({
+        invokeSendHandshakeInfo({
             SendType: SendType.Answer,
             Receiver: userName,
             Data: answer
@@ -112,8 +116,6 @@ function handleCandidate(userName, candidate) {
     _webRTCConnections[userName].addIceCandidate(new RTCIceCandidate(candidate));
 }
 
-
-
 function turnOnCamera() {
 
     navigator.webkitGetUserMedia(_webRTCCallConfiguration, function (myStream) {
@@ -122,13 +124,19 @@ function turnOnCamera() {
 
         _webRTCLocalStream = myStream;
 
-        
+        try {
+
+            localVideo.srcObject = _webRTCLocalStream;
+
+        } catch (error) {
+
+            localVideo.src = window.URL.createObjectURL(_webRTCLocalStream);
+        }
 
     }, function (err) {
         console.error(`Error when creating an answer: ${err.toString()}`);
     });
 }
-
 
 function changeCameraStatus(isEnable) {
 
@@ -153,7 +161,6 @@ function changeAudioStatus(isEnable) {
 
     _webRTCLocalStream.getAudioTracks()[0].enabled = isEnable;
 }
-
 
 
 async function startShareScreen() {
@@ -201,34 +208,40 @@ function stopShareScreen() {
     localVideo.srcObject = _webRTCLocalStream;
 }
 
- 
- var completeBlob ;
-var mediaStream ;
+
+
 async function startRecordScreen() {
 
-   mediaStream  = await navigator.mediaDevices.getDisplayMedia({
-  video: { mediaSource: "screen" }
-});
-var track= _webRTCLocalStream.getAudioTracks()[0];
-mediaStream.addTrack(track);
-const recorder = new MediaRecorder(mediaStream);
+    _recordMediaStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { mediaSource: "screen" }
+    });
 
-const chunks = [];
-recorder.ondataavailable = e => chunks.push(e.data);
-recorder.start();
+    var audioTrack = _webRTCLocalStream.getAudioTracks()[0];
 
-recorder.onstop = e => {
-console.log('stop');
-  completeBlob = new Blob(chunks, { type: chunks[0].type });
-  const localVideo = getLocalVideoElement();
-  localVideo.src = URL.createObjectURL(completeBlob);
-};
+    _recordMediaStream.addTrack(audioTrack);
+
+    _recorder= new MediaRecorder(_recordMediaStream);
+
+    const chunks = [];
+
+    _recorder.ondataavailable = e => chunks.push(e.data);
+
+    _recorder.start();
+
+    _recorder.onstop = e => {
+      
+        _complateBlob = new Blob(chunks, { type: chunks[0].type });
+         
+    };
 }
 
 function stopRecordScreen() {
- mediaStream.getTracks().forEach(function (track) {
-               track.stop();
-            }); 
+
+    _recorder.stop();
+
+    _recordMediaStream.getTracks().forEach(function (track) {
+        track.stop();
+    });
 }
 
-
+ 

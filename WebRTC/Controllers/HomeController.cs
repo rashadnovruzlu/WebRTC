@@ -23,6 +23,12 @@ namespace WebRTC.Controllers
             return View();
         }
 
+        public IActionResult NewRoom()
+        {
+            return View();
+        }
+
+
         public IActionResult Conference()
         {
             return View();

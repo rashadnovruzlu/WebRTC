@@ -1,0 +1,44 @@
+﻿<div class="row">
+    <div class="col-md-3">
+        
+    </div>
+    <div class="col-md-9">
+        <video id="localVideo" width="500" height="500" autoplay></video>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-3">
+
+    </div>
+    <div class="col-md-2">
+        <label class="checkbox-inline">
+            <input type="checkbox" id="toggleVideo" checked data-toggle="toggle">
+        </label>
+        <label class="checkbox-inline">
+            <input type="checkbox" id="toggleVoice" checked data-toggle="toggle">
+        </label>
+    </div>
+    <div class="col-md-7">
+     <input type="text" id="txtUserName" />
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        <input type="button" width="120" value="Davam et" />
+    </div>
+</div>
+
+
+
+@section Scripts {
+
+    <script src="~/js/signalr/dist/browser/signalr.js"></script>
+    <script src="~/js/js/enums.js"></script>
+    <script src="~/js/js/utility.js"></script>
+    <script src="~/js/js/ClientUI.js"></script>
+    <script src="~/js/js/webRTC.js"></script>
+    <script src="~/js/js/signalRClient.js"></script>
+    <script type="text/javascript">
+       turnOnCamera();
+    </script>
+}

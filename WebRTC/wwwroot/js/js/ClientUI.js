@@ -27,8 +27,14 @@
 $("#btnLogin").click(function () {
 
     _currentUser = $("#txtUserName").val();
+  
+    const roomName = $("#txtJoinRoomName").val();
 
-    invokeJoin();
+    invokeJoin(roomName);
+
+    turnOnCamera();
+
+    hideInitialElements();
 
 });
 
@@ -38,22 +44,14 @@ $("#btnCreateRoom").click(function () {
 
     invokeCreateRoom(roomName);
 
-});
-
-
-$("#btnJoinRoom").click(function () {
-
-    const roomName = $("#txtJoinRoomName").val();
-
-    invokeJoinRoom(roomName);
-
     turnOnCamera();
 
     hideInitialElements();
 
 });
 
-$("#btnShareScreen").click(function () {
+
+ $("#btnShareScreen").click(function () {
     startShareScreen();
 });
 
@@ -68,9 +66,9 @@ $("#btnRecordStart").click(function () {
 
 });
 
-$("#btnStopShareScreen").click(function () {
+$("#btnRecordStop").click(function () {
 
-    stopRecordScreen
+    stopRecordScreen();
 
 });
 
@@ -83,9 +81,11 @@ function hideInitialElements() {
 
 function removeUser(userName) {
 
-    document.querySelector('#remote-video-' + userName).remove();
+    var hashCode=userName.hashCode();
 
-    document.querySelector('#div-' + userName).remove();
+    document.querySelector('#remote-video-' + hashCode).remove();
+
+    document.querySelector('#div-' + hashCode).remove();
 }
 
 
@@ -99,11 +99,13 @@ function changeVideoTrackStatus(userName, isEnable) {
 
 function getUserVideoElement(userName) {
 
-    const videoElement = `<div id="div-` + userName + `" class="card"><video width="358" height="300" id="remote-video-` + userName + `"  muted autoplay></video> </br> <b> ` + userName + `</b> </div>`;
+    var hashCode=userName.hashCode();
+
+    const videoElement = `<div id="div-` + hashCode + `" class="card"><video width="358" height="300" id="remote-video-` + hashCode + `"  muted autoplay></video> </br> <b> ` + userName + `</b> </div>`;
 
     $(".basic-grid").append(videoElement);
 
-    const remoteVideoElement = document.querySelector('#remote-video-' + userName);
+    const remoteVideoElement = document.querySelector('#remote-video-' + hashCode);
 
     return remoteVideoElement;
 }
@@ -113,4 +115,38 @@ function getLocalVideoElement() {
     const localVideoElement = document.querySelector('#localVideo');
 
     return localVideoElement;
+}
+
+function receiveMessage(userName, message){
+
+}
+
+
+function changedHost(userName, message){
+
+}
+
+
+function sendMessage(message){
+
+    invokeSendMessage(message);
+}
+
+function hostJoiningConfirmation(userName){
+
+}
+
+function receiveHostJoiningResponse(responseStatusId){
+
+}
+
+
+function sendHostJoiningAnswer(roomName, userName){
+
+   invokeSendHostJoiningAnswer(roomName, userName);
+}
+
+function joiningRequestToHost(roomName, userName){
+
+   invokeJoiningRequestToHost(roomName, userName);
 }
